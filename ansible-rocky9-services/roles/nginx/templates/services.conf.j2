@@ -1,0 +1,81 @@
+# Upstream pour Draw.io
+upstream drawio_backend {
+    server 127.0.0.1:{{ drawio_port }};
+}
+
+# Upstream pour Stirling PDF
+upstream stirling_pdf_backend {
+    server 127.0.0.1:{{ stirling_pdf_port }};
+}
+
+# Redirection HTTP vers HTTPS
+server {
+    listen {{ nginx_http_port }};
+    server_name {{ domain_name }};
+    return 301 https://$server_name$request_uri;
+}
+
+# Configuration HTTPS principale
+server {
+    listen {{ nginx_https_port }} ssl http2;
+    server_name {{ domain_name }};
+
+    # Configuration SSL
+    ssl_certificate {{ ssl_certificate_path }}/{{ ssl_certificate_name }};
+    ssl_certificate_key {{ ssl_certificate_path }}/{{ ssl_private_key_name }};
+    ssl_session_timeout 1d;
+    ssl_session_cache shared:SSL:50m;
+    ssl_session_tickets off;
+
+    # Headers de sécurité
+    add_header Strict-Transport-Security "max-age=63072000" always;
+
+    # Page d'accueil
+    location / {
+        root /usr/share/nginx/html;
+        index index.html;
+    }
+
+    # Proxy pour Draw.io
+    location /drawio/ {
+        proxy_pass http://drawio_backend/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_redirect off;
+        
+        # Headers pour WebSocket si nécessaire
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        
+        # Timeouts
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+    }
+
+    # Proxy pour Stirling PDF
+    location /pdf/ {
+        proxy_pass http://stirling_pdf_backend/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_redirect off;
+        
+        # Configuration pour les fichiers volumineux
+        client_max_body_size 100M;
+        proxy_request_buffering off;
+        
+        # Timeouts
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 300s;
+        proxy_read_timeout 300s;
+    }
+
+    # Logs spécifiques
+    access_log /var/log/nginx/services_access.log;
+    error_log /var/log/nginx/services_error.log;
+}

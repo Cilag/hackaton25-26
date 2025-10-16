@@ -1,0 +1,69 @@
+---
+- name: Install and configure services on Rocky 9
+  hosts: rocky9_servers
+  become: yes
+  gather_facts: yes
+  
+  vars:
+    # Configuration générale
+    ansible_python_interpreter: /usr/bin/python3
+    
+  pre_tasks:
+    - name: Update system packages
+      dnf:
+        name: "*"
+        state: latest
+        update_cache: yes
+      tags: system_update
+      
+    - name: Install required system packages
+      dnf:
+        name:
+          - epel-release
+          - curl
+          - wget
+          - git
+          - firewalld
+          - policycoreutils-python-utils
+        state: present
+      tags: system_packages
+      
+    - name: Enable and start firewalld
+      systemd:
+        name: firewalld
+        enabled: yes
+        state: started
+      tags: firewall
+
+  roles:
+    - role: docker
+      tags: docker
+    - role: nginx
+      tags: nginx
+    - role: drawio
+      tags: drawio
+    - role: stirling-pdf
+      tags: stirling-pdf
+
+  post_tasks:
+    - name: Configure firewall for HTTP and HTTPS
+      firewalld:
+        service: "{{ item }}"
+        permanent: yes
+        state: enabled
+        immediate: yes
+      with_items:
+        - http
+        - https
+      tags: firewall
+      
+    - name: Display service status
+      debug:
+        msg: |
+          Installation completed successfully!
+          Services available:
+          - Draw.io: https://{{ ansible_default_ipv4.address }}/drawio
+          - Stirling PDF: https://{{ ansible_default_ipv4.address }}/pdf
+          - Nginx status: systemctl status nginx
+          - Docker status: systemctl status docker
+      tags: summary

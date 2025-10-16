@@ -1,0 +1,21 @@
+---
+# Variables globales pour tous les serveurs Rocky 9
+domain_name: "{{ ansible_default_ipv4.address }}"  # Utilisera l'IP par défaut
+nginx_user: nginx
+nginx_group: nginx
+docker_user: docker
+
+# Configuration SSL
+ssl_certificate_path: /etc/nginx/ssl
+ssl_certificate_name: server.crt
+ssl_private_key_name: server.key
+
+# Ports des services
+drawio_port: 8080
+stirling_pdf_port: 8081
+nginx_http_port: 80
+nginx_https_port: 443
+
+# Configuration sécurité
+enable_ssl: true
+enable_firewall: true

@@ -1,0 +1,16 @@
+# Requirements pour le projet Ansible
+# Installation : pip install -r requirements.txt
+
+# Modules Ansible pour Docker
+docker>=6.0.0
+docker-compose>=1.29.0
+
+# Modules pour la gestion des URLs et API
+requests>=2.25.0
+urllib3>=1.26.0
+
+# Module pour la gestion des certificats SSL
+cryptography>=3.4.0
+
+# Modules pour l'interface utilisateur (optionnels)
+colorama>=0.4.4

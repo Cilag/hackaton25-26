@@ -1,0 +1,81 @@
+---
+- name: Create stirling-pdf application directory
+  file:
+    path: /opt/docker-apps/stirling-pdf
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Create stirling-pdf data directories
+  file:
+    path: "/opt/docker-apps/stirling-pdf/{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  with_items:
+    - configs
+    - customFiles
+    - logs
+
+- name: Deploy Stirling PDF environment configuration
+  template:
+    src: stirling-pdf.env.j2
+    dest: /opt/docker-apps/stirling-pdf/.env
+    owner: root
+    group: root
+    mode: '0600'
+
+- name: Deploy Stirling PDF docker-compose configuration
+  template:
+    src: docker-compose.yml.j2
+    dest: /opt/docker-apps/stirling-pdf/docker-compose.yml
+    owner: root
+    group: root
+    mode: '0644'
+  notify: restart stirling-pdf
+
+- name: Pull Stirling PDF Docker image
+  command: docker pull frooodle/s-pdf:latest
+  register: docker_pull_result
+  changed_when: "'Downloaded newer image' in docker_pull_result.stderr or 'Pull complete' in docker_pull_result.stderr"
+
+- name: Start Stirling PDF container using docker-compose
+  command: docker-compose up -d
+  args:
+    chdir: /opt/docker-apps/stirling-pdf
+  register: docker_compose_result
+  changed_when: "'Starting' in docker_compose_result.stderr or 'Created' in docker_compose_result.stderr"
+
+- name: Create systemd service for Stirling PDF
+  template:
+    src: stirling-pdf.service.j2
+    dest: /etc/systemd/system/stirling-pdf.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify: reload systemd
+
+- name: Enable and start Stirling PDF service
+  systemd:
+    name: stirling-pdf
+    enabled: yes
+    state: started
+    daemon_reload: yes
+
+- name: Wait for Stirling PDF to be ready
+  wait_for:
+    port: "{{ stirling_pdf_port }}"
+    host: "127.0.0.1"
+    delay: 15
+    timeout: 120
+
+- name: Verify Stirling PDF is running
+  uri:
+    url: "http://127.0.0.1:{{ stirling_pdf_port }}"
+    method: GET
+    status_code: 200
+  register: stirling_pdf_check
+  retries: 5
+  delay: 15
