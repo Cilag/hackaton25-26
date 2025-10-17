@@ -1,0 +1,28 @@
+services:
+  dokuwiki:
+    image: linuxserver/dokuwiki:latest
+    container_name: dokuwiki
+    ports: ["8081:80"]
+    restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+    read_only: true
+    tmpfs: ["/run:exec,mode=755","/tmp"]
+    healthcheck:
+      test: ["CMD","wget","-q","-O","/dev/null","http://127.0.0.1/"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+  drawio:
+    image: jgraph/drawio:latest
+    container_name: drawio
+    ports: ["8082:8080"]
+    restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+    read_only: true
+    tmpfs: ["/tmp"]
+    healthcheck:
+      test: ["CMD","wget","-q","-O","/dev/null","http://127.0.0.1:8080/"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
